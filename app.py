@@ -7,4 +7,9 @@ def home():
     return "Paint Home Backend is Running!"
 
 if __name__ == '__main__':
-    app.run(debug=True)
+
+    if __name__=="__main__":
+         app.run(host="0.0.0.0",
+                 port=int(o.s.environ.get("PORT",5000)),
+                 debug=True
+                 
