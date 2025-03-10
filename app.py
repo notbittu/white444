@@ -1,40 +1,40 @@
-from flask import Flask
+from flask import Flask, request, jsonify, render_template
+import cv2
+import numpy as np
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Paint Home Backend is Running!"
+    return "Paint Home Backend is Running."
 
-if __name__ == '__main__':
+@app.route('/color-suggestion', methods=['POST'])
+def color_suggestion():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
+    
+    image = request.files['image']
+    img = cv2.imdecode(np.frombuffer(image.read(), np.uint8), cv2.IMREAD_COLOR)
 
-    if __name__=="__main__":
-         app.run(host="0.0.0.0",
-                 port=int(o.s.environ.get("PORT",5000)),
-                 debug=True)
-                 from flask import Flask, request, jsonify, render_template
-import cv2
-import numpy as np
+    if img is None:
+        return jsonify({"error": "Invalid image"}), 400
 
-app = Flask(_name_)
+    # Get the average color of the image
+    avg_color_per_row = np.average(img, axis=0)
+    avg_color = np.average(avg_color_per_row, axis=0)
+    avg_color = avg_color.astype(int)
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+    # Convert BGR to HEX color code
+    hex_color = '#%02x%02x%02x' % (avg_color[2], avg_color[1], avg_color[0])
 
-@app.route('/scan', methods=['POST'])
-def scan():
-    try:
-        file = request.files['image']
-        img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
-        
-        # Dummy processing (You can replace with actual processing)
-        processed_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        avg_color = int(np.mean(processed_img))
+    # AI-based color suggestion (simple version)
+    suggestions = [
+        hex_color,
+        '#%02x%02x%02x' % ((avg_color[2] + 50) % 256, (avg_color[1] + 30) % 256, (avg_color[0] + 10) % 256),
+        '#%02x%02x%02x' % ((avg_color[2] - 50) % 256, (avg_color[1] - 30) % 256, (avg_color[0] - 10) % 256),
+    ]
 
-        return jsonify({'message': 'Scanning successful', 'average_color': avg_color})
-    except Exception as e:
-        return jsonify({'error': str(e)})
+    return jsonify({"average_color": hex_color, "suggestions": suggestions})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
