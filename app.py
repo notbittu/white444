@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 import cv2
 import numpy as np
 
@@ -8,33 +8,59 @@ app = Flask(__name__)
 def home():
     return "Paint Home Backend is Running."
 
+def calculate_shadow_effect(color, light_intensity):
+    """Calculate how the color looks under different light intensities."""
+    r, g, b = color
+    factor = light_intensity / 100
+    new_r = int(min(255, r * factor))
+    new_g = int(min(255, g * factor))
+    new_b = int(min(255, b * factor))
+    return '#%02x%02x%02x' % (new_r, new_g, new_b)
+
 @app.route('/color-suggestion', methods=['POST'])
 def color_suggestion():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image provided"}), 400
-    
-    image = request.files['image']
-    img = cv2.imdecode(np.frombuffer(image.read(), np.uint8), cv2.IMREAD_COLOR)
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image provided"}), 400
 
-    if img is None:
-        return jsonify({"error": "Invalid image"}), 400
+        image = request.files['image']
+        img = cv2.imdecode(np.frombuffer(image.read(), np.uint8), cv2.IMREAD_COLOR)
 
-    # Get the average color of the image
-    avg_color_per_row = np.average(img, axis=0)
-    avg_color = np.average(avg_color_per_row, axis=0)
-    avg_color = avg_color.astype(int)
+        if img is None:
+            return jsonify({"error": "Invalid image"}), 400
 
-    # Convert BGR to HEX color code
-    hex_color = '#%02x%02x%02x' % (avg_color[2], avg_color[1], avg_color[0])
+        # Calculate average color
+        avg_color_per_row = np.average(img, axis=0)
+        avg_color = np.average(avg_color_per_row, axis=0)
+        avg_color = avg_color.astype(int)
 
-    # AI-based color suggestion (simple version)
-    suggestions = [
-        hex_color,
-        '#%02x%02x%02x' % ((avg_color[2] + 50) % 256, (avg_color[1] + 30) % 256, (avg_color[0] + 10) % 256),
-        '#%02x%02x%02x' % ((avg_color[2] - 50) % 256, (avg_color[1] - 30) % 256, (avg_color[0] - 10) % 256),
-    ]
+        # Convert BGR to HEX
+        hex_color = '#%02x%02x%02x' % (avg_color[2], avg_color[1], avg_color[0])
 
-    return jsonify({"average_color": hex_color, "suggestions": suggestions})
+        # AI-based color suggestions (more realistic)
+        suggestions = [
+            hex_color,
+            '#%02x%02x%02x' % ((avg_color[2] + 30) % 256, (avg_color[1] + 20) % 256, (avg_color[0] + 10) % 256),
+            '#%02x%02x%02x' % ((avg_color[2] - 30) % 256, (avg_color[1] - 20) % 256, (avg_color[0] - 10) % 256),
+        ]
 
-if __name__ == "__main__":
+        # Simulate different light intensities for shadow tracking
+        shadow_effects = {
+            "dim_light": calculate_shadow_effect(avg_color, 50),
+            "normal_light": calculate_shadow_effect(avg_color, 100),
+            "bright_light": calculate_shadow_effect(avg_color, 150)
+        }
+
+        response = {
+            "average_color": hex_color,
+            "suggestions": suggestions,
+            "shadow_tracking": shadow_effects
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
