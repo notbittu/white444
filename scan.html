@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paint Home - Wall Scanning</title>
+</head>
+<body>
+    <h2>Upload Wall Image to Scan</h2>
+    <input type="file" id="fileInput">
+    <button onclick="scanWall()">Scan Wall</button>
+    <p id="result"></p>
+
+    <script>
+        function scanWall() {
+            const fileInput = document.getElementById('fileInput').files[0];
+            if (!fileInput) {
+                document.getElementById('result').innerText = "Please select an image first!";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput);
+
+            fetch("https://white444-1.onrender.com/scan", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    document.getElementById('result').innerText =
+                        "Scanning Successful! Average Color Value: " + data.average_color;
+                } else {
+                    document.getElementById('result').innerText =
+                        "Error: " + data.error;
+                }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              
+            })
+            .catch(error => {
+                document.getElementById('result').innerText =
+                    "Error occurred: " + error;
+            });
+        }
+    </script>
+</body>
+</html>
