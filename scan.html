@@ -1,37 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paint Home - Wall Scanning</title>
+    <title>Paint Home - Wall Scanner</title>
 </head>
 <body>
-    <h2>Upload Wall Image to Scan</h2>
-    <input type="file" id="fileInput">
-    <button onclick="scanWall()">Scan Wall</button>
+    <h2>Upload Wall Image for Scanning</h2>
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="uploadFile()">Scan</button>
     <p id="result"></p>
 
     <script>
-        function scanWall() {
-            const fileInput = document.getElementById("fileInput").files[0];
-            if (!fileInput) {
-                document.getElementById("result").innerText = "Please select an image first!";
+        function uploadFile() {
+            const fileInput = document.getElementById("fileInput");
+            const resultElement = document.getElementById("result");
+
+            // Check if file is selected
+            if (fileInput.files.length === 0) {
+                resultElement.innerText = "Error: Please select a file!";
                 return;
             }
 
+            // Create FormData object
             const formData = new FormData();
-            formData.append("file", fileInput);
+            formData.append("file", fileInput.files[0]);
 
+            // Show uploading message
+            resultElement.innerText = "Uploading and Scanning...";
+
+            // Make the fetch request
             fetch("https://white444.onrender.com/scan", {
                 method: "POST",
-                body: formData
+                body: formData,
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            })
             .then(data => {
-                document.getElementById("result").innerText = "Result: " + data.result;
+                if (data.error) {
+                    resultElement.innerText = "Error: " + data.error;
+                } else {
+                    resultElement.innerText = "Result: " + data.result;
+                }
             })
             .catch(error => {
-                document.getElementById("result").innerText = "Error: " + error.message;
+                resultElement.innerText = "Error: " + error.message;
+                console.error("Error during upload:", error);
             });
         }
     </script>
