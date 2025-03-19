@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_cors
+from flask_cors import CORS
 import cv2
 import numpy as np
 
