@@ -13,78 +13,27 @@
 
     <script>
         function scanWall() {
-            const fileInput = document.getElementById('fileInput').files[0];
+            const fileInput = document.getElementById("fileInput").files[0];
             if (!fileInput) {
-                document.getElementById('result').innerText = "Please select an image first!";
+                document.getElementById("result").innerText = "Please select an image first!";
                 return;
             }
 
             const formData = new FormData();
-            formData.append('image', fileInput);
+            formData.append("file", fileInput);
 
-            fetch(https://white444.onrender.com/color-suggestion {
+            fetch("https://white444.onrender.com/scan", {
                 method: "POST",
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
-                if (data.message) {
-                    document.getElementById('result').innerText =
-                        "Scanning Successful! Average Color Value: " + data.average_color;
-                } else {
-                    document.getElementById('result').innerText =
-                        "Error: " + data.error;
-                }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                document.getElementById("result").innerText = "Result: " + data.result;
+            })
+            .catch(error => {
+                document.getElementById("result").innerText = "Error: " + error.message;
+            });
+        }
+    </script>
+</body>
+</html>
