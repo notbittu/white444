@@ -2,3 +2,4 @@ Flask
 numpy
 opencv-python
 gunicorn
+flask_cors
