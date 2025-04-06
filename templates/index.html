@@ -3,112 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Paint Home - Smart Color Suggestion</title>
+  <title>Paint Home - Smart Scanner</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(120deg, #f0f4f8, #d9e2ec);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      margin-top: 30px;
-      color: #2f3e46;
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+      padding: 20px;
     }
     video, canvas {
-      border: 5px solid #2f3e46;
-      border-radius: 15px;
-      margin-top: 20px;
-      width: 90%;
-      max-width: 500px;
+      border: 2px solid #333;
+      margin: 10px;
+      width: 320px;
+      height: 240px;
     }
     button {
-      margin: 20px;
-      padding: 12px 24px;
-      background-color: #1d3557;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      padding: 10px 20px;
+      margin-top: 10px;
       font-size: 16px;
-      transition: background 0.3s ease;
-    }
-    button:hover {
-      background-color: #457b9d;
-    }
-    #result {
-      background: #fff;
-      padding: 20px;
-      margin-top: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    #color-preview {
-      width: 100px;
-      height: 100px;
-      border-radius: 12px;
-      margin: 10px auto;
-      border: 2px solid #000;
     }
   </style>
 </head>
 <body>
-  <h1>Paint Home: Smart Wall Color Advisor</h1>
-
-  <video id="camera" autoplay></video>
-  <canvas id="snapshot" style="display: none;"></canvas>
-
-  <button onclick="captureAndSend()">Scan My Wall</button>
-
-  <div id="result" style="display: none;">
-    <h2>Suggested Paint Color:</h2>
-    <div id="color-preview"></div>
-    <p id="color-code"></p>
-  </div>
+  <h1>Paint Home - Wall Color Scanner</h1>
+  <video id="video" autoplay></video>
+  <br>
+  <button onclick="captureImage()">Scan Wall</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <p id="result"></p>
 
   <script>
-    const video = document.getElementById("camera");
-    const canvas = document.getElementById("snapshot");
-    const result = document.getElementById("result");
-    const colorPreview = document.getElementById("color-preview");
-    const colorCode = document.getElementById("color-code");
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const result = document.getElementById('result');
 
+    // Camera Access
     navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
+      .then(stream => {
         video.srcObject = stream;
-      })
-      .catch((err) => {
-        alert("Camera access denied: " + err);
+      }).catch(err => {
+        alert("Camera not accessible: " + err.message);
       });
 
-    function captureAndSend() {
-      const context = canvas.getContext("2d");
+    // Capture Image
+    function captureImage() {
+      const ctx = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0);
 
-      canvas.toBlob((blob) => {
+      canvas.toBlob(blob => {
         const formData = new FormData();
-        formData.append("image", blob, "wall.jpg");
+        formData.append('image', blob, 'capture.jpg');
 
-        fetch("/color-suggestion", {
-          method: "POST",
-          body: formData,
+        fetch('/color-suggestion', {
+          method: 'POST',
+          body: formData
         })
-        .then((res) => res.json())
-        .then((data) => {
-          colorPreview.style.backgroundColor = data.suggested_color;
-          colorCode.textContent = data.suggested_color;
-          result.style.display = "block";
+        .then(res => res.json())
+        .then(data => {
+          result.innerHTML = Suggested Color: <span style="color:${data.suggested_color}; font-weight:bold">${data.suggested_color}</span>;
+          document.body.style.backgroundColor = data.suggested_color;
         })
-        .catch((err) => {
-          alert("Something went wrong: " + err);
+        .catch(err => {
+          result.textContent = "Error: " + err;
         });
-      }, "image/jpeg");
+      }, 'image/jpeg');
     }
   </script>
 </body>
