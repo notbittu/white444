@@ -1,104 +1,136 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paint Home - Wall Scanner</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #e3f2fd, #fff);
             margin: 0;
-            padding: 0;
-            text-align: center;
-            color: #333;
-        }
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(120deg, #f5f7fa, #c3cfe2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }header {
+        width: 100%;
+        background: #2c3e50;
+        padding: 20px 0;
+        text-align: center;
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
 
-        h1 {
-            padding: 20px 0;
-            font-size: 2.2rem;
-            background-color: #1976d2;
-            color: white;
-            margin-bottom: 30px;
-        }
+    .scanner-box {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        width: 90%;
+        max-width: 600px;
+    }
 
-        video, canvas {
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
+    video, canvas {
+        width: 100%;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
 
-        #container {
-            max-width: 600px;
-            margin: auto;
-        }
+    .button {
+        background: #27ae60;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
 
-        #captureBtn {
-            margin: 20px auto;
-            padding: 12px 25px;
-            background-color: #43a047;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+    .button:hover {
+        background: #219150;
+    }
 
-        #captureBtn:hover {
-            background-color: #388e3c;
-        }
+    .result {
+        margin-top: 20px;
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: #2c3e50;
+    }
 
-        #colorResult {
-            font-size: 1.2rem;
-            margin-top: 20px;
-            padding: 10px;
-            background: #f1f1f1;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: inline-block;
-        }
-    </style>
+    .color-box {
+        margin-top: 10px;
+        height: 40px;
+        width: 100px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        display: inline-block;
+    }
+</style>
+
 </head>
 <body>
-    <h1>Paint Home - Wall Scanner</h1>
+    <header>Paint Home - Wall Scanner</header><div class="scanner-box">
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <button class="button" onclick="captureAndSend()">
+        <i class="fas fa-paint-brush"></i> Capture & Suggest Color
+    </button>
+    <div class="result" id="result"></div>
+    <div class="color-box" id="colorBox"></div>
+</div>
 
-    <div id="container">
-        <video id="video" width="400" height="300" autoplay></video><br>
-        <button id="captureBtn">Capture & Suggest Color</button>
-        <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
-        <div id="colorResult">Suggested Color: <span id="colorCode">None</span></div>
-    </div>
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const result = document.getElementById('result');
+    const colorBox = document.getElementById('colorBox');
 
-    <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const colorCode = document.getElementById('colorCode');
-        const captureBtn = document.getElementById('captureBtn');
-        const ctx = canvas.getContext('2d');
-
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
             video.srcObject = stream;
         });
 
-        captureBtn.addEventListener('click', () => {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(blob => {
-                const formData = new FormData();
-                formData.append('image', blob, 'capture.jpg');
-                fetch('/color-suggestion', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    colorCode.textContent = data.suggested_color;
-                    colorCode.style.color = data.suggested_color;
-                })
-                .catch(error => {
-                    colorCode.textContent = 'Error';
-                });
-            }, 'image/jpeg');
+    function captureAndSend() {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('image', blob);
+
+            fetch('/color-suggestion', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                const hex = data.color;
+                const name = getColorName(hex);
+                result.innerHTML = Suggested Color: <strong>${hex}</strong> (${name});
+                colorBox.style.backgroundColor = hex;
+            })
+            .catch(err => {
+                result.textContent = 'Error processing image';
+            });
         });
-    </script>
-</body>
-</html>
+    }
+
+    function getColorName(hex) {
+        const namedColors = {
+            '#ffffff': 'White', '#000000': 'Black', '#ff0000': 'Red', '#00ff00': 'Green', '#0000ff': 'Blue',
+            '#6f6f6f': 'Gray', '#ff69b4': 'Pink', '#a52a2a': 'Brown', '#808000': 'Olive', '#6a5acd': 'Slate Blue',
+            '#6f6f69': 'Stone Gray', '#6f6f96': 'Shadow Blue', '#6f6f39': 'Dusty Olive'
+        };
+        const lowerHex = hex.toLowerCase();
+        return namedColors[lowerHex] || 'Custom Shade';
+    }
+</s
