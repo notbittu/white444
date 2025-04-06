@@ -8,7 +8,7 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('index.html')  # Serve frontend page
 
 def calculate_shadow_effect(color, light_intensity):
     r, g, b = color
@@ -25,17 +25,24 @@ def color_suggestion():
         if not image_file:
             return jsonify({'error': 'No file uploaded'}), 400
 
+        # Read and decode image
         image = cv2.imdecode(np.frombuffer(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
+
+        # Calculate average color
         avg_color_per_row = np.average(image, axis=0)
         avg_color = np.average(avg_color_per_row, axis=0).astype(int)
-        avg_color = (avg_color[2], avg_color[1], avg_color[0])  # Convert BGR to RGB
+        avg_color = (avg_color[2], avg_color[1], avg_color[0])  # BGR to RGB
 
-        light_intensity = 80  # Example static value
+        # Apply light effect
+        light_intensity = 80  # Fixed for now
         suggested_color = calculate_shadow_effect(avg_color, light_intensity)
 
         return jsonify({'suggested_color': suggested_color})
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
