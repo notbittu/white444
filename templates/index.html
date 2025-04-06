@@ -1,58 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Paint Home - Smart Scanner</title>
+  <meta charset="UTF-8">
+  <title>Paint Home Scanner</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #f8f8f8, #c6e2ff);
       text-align: center;
-      background-color: #f4f4f4;
-      padding: 20px;
+      padding: 30px;
+    }
+    h1 {
+      color: #003366;
+      margin-bottom: 20px;
     }
     video, canvas {
-      border: 2px solid #333;
-      margin: 10px;
-      width: 320px;
-      height: 240px;
+      border: 3px solid #333;
+      border-radius: 10px;
+      margin-top: 10px;
     }
     button {
-      padding: 10px 20px;
-      margin-top: 10px;
+      margin: 15px;
+      padding: 12px 20px;
       font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: green;
     }
   </style>
 </head>
 <body>
-  <h1>Paint Home - Wall Color Scanner</h1>
-  <video id="video" autoplay></video>
+
+  <h1>Paint Home: Wall Scanner</h1>
+
+  <video id="video" width="400" height="300" autoplay></video>
   <br>
-  <button onclick="captureImage()">Scan Wall</button>
-  <canvas id="canvas" style="display:none;"></canvas>
-  <p id="result"></p>
+  <button onclick="captureImage()">Capture</button>
+  <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+
+  <div id="result"></div>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const result = document.getElementById('result');
+    const ctx = canvas.getContext('2d');
 
-    // Camera Access
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         video.srcObject = stream;
-      }).catch(err => {
-        alert("Camera not accessible: " + err.message);
+      })
+      .catch(error => {
+        alert('Camera access denied or not supported.');
       });
 
-    // Capture Image
     function captureImage() {
-      const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
-
-      canvas.toBlob(blob => {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function(blob) {
         const formData = new FormData();
         formData.append('image', blob, 'capture.jpg');
 
@@ -62,14 +73,17 @@
         })
         .then(res => res.json())
         .then(data => {
-          result.innerHTML = Suggested Color: <span style="color:${data.suggested_color}; font-weight:bold">${data.suggested_color}</span>;
+          document.getElementById('result').innerHTML =
+            Suggested Color: <span style="color:${data.suggested_color};">${data.suggested_color}</span>;
           document.body.style.backgroundColor = data.suggested_color;
         })
         .catch(err => {
-          result.textContent = "Error: " + err;
+          console.error(err);
+          alert("Failed to fetch color.");
         });
       }, 'image/jpeg');
     }
   </script>
+
 </body>
 </html>
