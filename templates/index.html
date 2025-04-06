@@ -1,70 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Paint Home - Smart Color Suggestion</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paint Home - AI Color Suggestion</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #ece9e6, #ffffff);
-      padding: 30px;
+      font-family: Arial, sans-serif;
       text-align: center;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
     }
     h1 {
-      color: #2c3e50;
-      margin-bottom: 20px;
+      color: #333;
     }
-    input, button {
-      margin: 10px;
-      padding: 10px;
+    #camera {
+      width: 100%;
+      max-width: 500px;
+      margin: auto;
+    }
+    video, canvas {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    #capture-btn, #upload-btn {
+      margin-top: 10px;
+      padding: 10px 20px;
       font-size: 16px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    #colorBox {
+    #result {
       margin-top: 20px;
-      width: 200px;
-      height: 200px;
-      border: 2px solid #ccc;
-      margin-left: auto;
-      margin-right: auto;
-      border-radius: 12px;
+      font-size: 18px;
+    }
+    #suggested-color {
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 5px;
+      display: inline-block;
     }
   </style>
 </head>
 <body>
-  <h1>Paint Home: Smart Color Suggestion</h1>
+  <h1>Paint Home - AI Wall Color Suggestion</h1>
 
-  <input type="file" id="imageInput" accept="image/*">
-  <br>
-  <button onclick="sendImage()">Get Color Suggestion</button>
+  <div id="camera">
+    <video id="video" autoplay></video>
+    <button id="capture-btn">Capture</button>
+    <canvas id="canvas" style="display: none;"></canvas>
+  </div>
 
-  <div id="colorBox"></div>
-  <p id="colorCodeText"></p>
+  <div id="result"></div>
 
   <script>
-    async function sendImage() {
-      const input = document.getElementById('imageInput');
-      if (!input.files[0]) {
-        alert("Please select an image first.");
-        return;
-      }
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const result = document.getElementById('result');
+    const captureBtn = document.getElementById('capture-btn');
 
-      const formData = new FormData();
-      formData.append("image", input.files[0]);
+    // Ask for camera access
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        video.srcObject = stream;
+      })
+      .catch((err) => {
+        alert("Camera access denied: " + err);
+      });
 
-      try {
-        const response = await fetch("https://white444.onrender.com/color-suggestion", {
-          method: "POST",
+    captureBtn.addEventListener('click', () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      canvas.toBlob((blob) => {
+        const formData = new FormData();
+        formData.append('image', blob, 'wall.jpg');
+
+        fetch('https://white444.onrender.com/color-suggestion', {
+          method: 'POST',
           body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          const color = data.suggested_color;
+          result.innerHTML = `
+            Suggested Color: <span id="suggested-color" style="background:${color}; color:white;">${color}</span>
+          `;
+        })
+        .catch(err => {
+          result.innerHTML = "Error: " + err;
         });
-
-        const data = await response.json();
-        const color = data.suggested_color;
-        document.getElementById("colorBox").style.background = color;
-        document.getElementById("colorCodeText").innerText = Suggested Color: ${color};
-      } catch (err) {
-        alert("Failed to get suggestion.");
-      }
-    }
+      }, 'image/jpeg');
+    });
   </script>
 </body>
 </html>
