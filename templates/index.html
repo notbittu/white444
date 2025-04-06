@@ -1,89 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Paint Home Scanner</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #f8f8f8, #c6e2ff);
-      text-align: center;
-      padding: 30px;
-    }
-    h1 {
-      color: #003366;
-      margin-bottom: 20px;
-    }
-    video, canvas {
-      border: 3px solid #333;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
-    button {
-      margin: 15px;
-      padding: 12px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      background-color: #007BFF;
-      color: white;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-      color: green;
-    }
-  </style>
+    <title>Paint Home: Wall Scanner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #dbe9f4;
+            text-align: center;
+            margin: 0;
+            padding: 40px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        video, canvas {
+            border: 2px solid #2c3e50;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #00bcd4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0097a7;
+        }
+        #result {
+            margin-top: 30px;
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
+    <h1>Paint Home: Wall Scanner</h1>
 
-  <h1>Paint Home: Wall Scanner</h1>
+    <video id="video" width="480" height="360" autoplay></video>
+    <br>
+    <button onclick="capture()">Capture</button>
 
-  <video id="video" width="400" height="300" autoplay></video>
-  <br>
-  <button onclick="captureImage()">Capture</button>
-  <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+    <canvas id="canvas" width="480" height="360" style="display:none;"></canvas>
+    <div id="result"></div>
 
-  <div id="result"></div>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const resultDiv = document.getElementById('result');
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+        // Request camera access
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Camera access error:", err);
+                resultDiv.innerText = "Error: Camera access denied.";
+            });
 
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        video.srcObject = stream;
-      })
-      .catch(error => {
-        alert('Camera access denied or not supported.');
-      });
+        function capture() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'capture.jpg');
 
-    function captureImage() {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(function(blob) {
-        const formData = new FormData();
-        formData.append('image', blob, 'capture.jpg');
-
-        fetch('/color-suggestion', {
-          method: 'POST',
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById('result').innerHTML =
-            Suggested Color: <span style="color:${data.suggested_color};">${data.suggested_color}</span>;
-          document.body.style.backgroundColor = data.suggested_color;
-        })
-        .catch(err => {
-          console.error(err);
-          alert("Failed to fetch color.");
-        });
-      }, 'image/jpeg');
-    }
-  </script>
-
+                fetch('/color-suggestion', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    resultDiv.innerHTML = <p><strong>Suggested Paint Color:</strong> <span style="background-color:${data.suggested_color}; padding: 5px 10px; border-radius: 4px;">${data.suggested_color}</span></p>;
+                })
+                .catch(error => {
+                    resultDiv.innerText = 'Error sending image to server';
+                    console.error('Upload error:', error);
+                });
+            }, 'image/jpeg');
+        }
+    </script>
 </body>
 </html>
