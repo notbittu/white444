@@ -1,13 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Paint Home</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      text-align: center;
+      padding: 50px;
+    }
+    input[type="file"] {
+      margin-top: 20px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
   <h1>Welcome to Paint Home</h1>
-  <p>Scan your wall and get beautiful color suggestions!</p>
+  <p>Upload a wall photo to get the best paint color suggestion!</p>
+  <input type="file" id="imageInput" />
+  <br />
+  <button onclick="uploadImage()">Suggest Color</button>
+  <p id="result"></p>
+
+  <script>
+    async function uploadImage() {
+      const input = document.getElementById("imageInput");
+      const file = input.files[0];
+      if (!file) {
+        alert("Please select an image first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/color-suggestion", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      document.getElementById("result").innerHTML =
+        "Suggested Color: <span style='color:" +
+        data.suggested_color +
+        "'>" +
+        data.suggested_color +
+        "</span>";
+    }
+  </script>
 </body>
 </html>
-
