@@ -1,58 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Paint Home</title>
+  <title>Paint Home - Wall Scanner</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
-      text-align: center;
-      padding: 50px;
-    }
-    input[type="file"] {
-      margin-top: 20px;
-    }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-    }
+    video, canvas { width: 300px; height: 225px; border-radius: 12px; }
+    #result { margin-top: 20px; font-size: 18px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>Welcome to Paint Home</h1>
-  <p>Upload a wall photo to get the best paint color suggestion!</p>
-  <input type="file" id="imageInput" />
-  <br />
-  <button onclick="uploadImage()">Suggest Color</button>
-  <p id="result"></p>
+  <h2>Paint Home - Wall Scanner</h2>
+  <video id="video" autoplay></video><br>
+  <button onclick="capture()">Capture & Suggest Color</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <div id="result">Suggested Color: <span id="color"></span></div>
 
   <script>
-    async function uploadImage() {
-      const input = document.getElementById("imageInput");
-      const file = input.files[0];
-      if (!file) {
-        alert("Please select an image first.");
-        return;
-      }
+    const video = document.getElementById('video');
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+    });
 
-      const formData = new FormData();
-      formData.append("image", file);
+    function capture() {
+      const canvas = document.getElementById('canvas');
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('image', blob, 'wall.jpg');
 
-      const response = await fetch("/color-suggestion", {
-        method: "POST",
-        body: formData,
+        fetch('/color-suggestion', {
+          method: 'POST',
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('color').innerText = data.suggested_color;
+          document.getElementById('result').style.color = data.suggested_color;
+        });
       });
-
-      const data = await response.json();
-      document.getElementById("result").innerHTML =
-        "Suggested Color: <span style='color:" +
-        data.suggested_color +
-        "'>" +
-        data.suggested_color +
-        "</span>";
     }
   </script>
 </body>
