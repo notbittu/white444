@@ -1,104 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Paint Home - Wall Color Suggestion</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #e3f2fd, #fffde7);
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    h1 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-    }
-    video, canvas {
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      max-width: 100%;
-      height: auto;
-    }
-    button {
-      padding: 12px 20px;
-      background-color: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      margin-top: 15px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0d47a1;
-    }
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .color-box {
-      display: inline-block;
-      width: 60px;
-      height: 60px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 2px solid #000;
-    }
-  </style>
+    <title>Paint Home - Wall Scanner</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial;
+            background-color: #f5f5f5;
+        }
+        video {
+            width: 80%;
+            max-width: 500px;
+            margin-top: 20px;
+            transform: scaleX(-1); /* mirror fix */
+        }
+        canvas {
+            display: none;
+        }
+        #colorBox {
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            border: 2px solid black;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Paint Home</h1>
-  <p>Scan your wall and get the perfect paint color!</p>
+    <h1>Paint Home - Smart Wall Scanner</h1>
+    <video id="video" autoplay></video>
+    <br>
+    <button id="flipBtn">Flip Camera</button>
+    <button onclick="captureImage()">Scan Wall</button>
+    <canvas id="canvas"></canvas>
+    <div id="colorBox"></div>
+    <p id="hexValue"></p>
 
-  <video id="video" autoplay></video><br>
-  <button onclick="capture()">Capture & Suggest Color</button>
-  <canvas id="canvas" style="display:none;"></canvas>
+    <script>
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+        let usingFrontCamera = true;
+        let currentStream;
 
-  <div class="result" id="result"></div>
-  <div class="color-box" id="colorBox"></div>
+        async function startCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            const constraints = {
+                video: {
+                    facingMode: usingFrontCamera ? "user" : "environment"
+                }
+            };
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+        }
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const result = document.getElementById('result');
-    const colorBox = document.getElementById('colorBox');
-
-    // Get Camera Stream
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        video.srcObject = stream;
-      })
-      .catch(err => {
-        alert("Camera access denied or not available.");
-      });
-
-    function capture() {
-      const context = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob(blob => {
-        const formData = new FormData();
-        formData.append('image', blob, 'wall.jpg');
-
-        fetch('/color-suggestion', {
-          method: 'POST',
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          result.textContent = "Suggested Color: " + data.color;
-          colorBox.style.backgroundColor = data.color;
-        })
-        .catch(err => {
-          result.textContent = "Error processing image.";
+        document.getElementById('flipBtn').addEventListener('click', () => {
+            usingFrontCamera = !usingFrontCamera;
+            startCamera();
         });
-      }, 'image/jpeg');
-    }
-  </script>
+
+        startCamera();
+
+        async function captureImage() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.save();
+            context.scale(-1, 1); // flip image back before capture
+            context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            context.restore();
+
+            canvas.toBlob(async function(blob) {
+                let formData = new FormData();
+                formData.append("image", blob, "frame.jpg");
+
+                let response = await fetch("/color-suggestion", {
+                    method: "POST",
+                    body: formData
+                });
+                let data = await response.json();
+                document.getElementById('colorBox').style.backgroundColor = data.color;
+                document.getElementById('hexValue').innerText = "Suggested Color: " + data.color;
+            }, 'image/jpeg');
+        }
+    </script>
 </body>
 </html>
