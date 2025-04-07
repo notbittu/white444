@@ -1,93 +1,81 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Paint Home - Smart Wall Color Suggestion</title>
+  <title>Paint Home - Wall Color Suggestion</title>
   <style>
     body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #e3f2fd, #fffde7);
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to bottom right, #f5f7fa, #c3cfe2);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-    }h1 {
-  color: #2b2b2b;
-  margin-bottom: 1rem;
-}
-
-video, canvas {
-  border: 2px solid #444;
-  border-radius: 10px;
-  width: 100%;
-  max-width: 600px;
-}
-
-button {
-  margin-top: 1rem;
-  padding: 0.7rem 1.5rem;
-  border: none;
-  background-color: #4caf50;
-  color: white;
-  font-size: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-button:hover {
-  background-color: #388e3c;
-}
-
-#result {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 600px;
-  text-align: center;
-}
-
-#colorBox {
-  width: 100px;
-  height: 100px;
-  margin: 1rem auto;
-  border-radius: 10px;
-  border: 2px solid #333;
-}
-
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    video, canvas {
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      max-width: 100%;
+      height: auto;
+    }
+    button {
+      padding: 12px 20px;
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0d47a1;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .color-box {
+      display: inline-block;
+      width: 60px;
+      height: 60px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 2px solid #000;
+    }
   </style>
 </head>
 <body>
-  <h1>Paint Home - Smart Wall Color Suggestion</h1>
-  <video id="video" autoplay playsinline></video>
-  <br>
-  <button onclick="capturePhoto()">Capture Wall</button>
-  <canvas id="canvas" style="display:none;"></canvas>  <div id="result" style="display: none;">
-    <h2>Suggested Color:</h2>
-    <div id="colorBox"></div>
-    <p id="colorHex"></p>
-    <p id="colorName"></p>
-  </div>  <script>
+  <h1>Paint Home</h1>
+  <p>Scan your wall and get the perfect paint color!</p>
+
+  <video id="video" autoplay></video><br>
+  <button onclick="capture()">Capture & Suggest Color</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div class="result" id="result"></div>
+  <div class="color-box" id="colorBox"></div>
+
+  <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const resultDiv = document.getElementById('result');
+    const result = document.getElementById('result');
     const colorBox = document.getElementById('colorBox');
-    const colorHex = document.getElementById('colorHex');
-    const colorName = document.getElementById('colorName');
 
+    // Get Camera Stream
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         video.srcObject = stream;
       })
       .catch(err => {
-        alert('Camera access denied!');
+        alert("Camera access denied or not available.");
       });
 
-    function capturePhoto() {
+    function capture() {
       const context = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -97,41 +85,20 @@ button:hover {
         const formData = new FormData();
         formData.append('image', blob, 'wall.jpg');
 
-        fetch('https://white444.onrender.com/color-suggestion', {
+        fetch('/color-suggestion', {
           method: 'POST',
           body: formData
         })
         .then(res => res.json())
         .then(data => {
-          if (data.color) {
-            resultDiv.style.display = 'block';
-            colorBox.style.backgroundColor = data.color;
-            colorHex.innerText = 'Hex: ' + data.color;
-            colorName.innerText = getColorName(data.color);
-          } else {
-            alert('Failed to get color suggestion');
-          }
+          result.textContent = "Suggested Color: " + data.color;
+          colorBox.style.backgroundColor = data.color;
         })
         .catch(err => {
-          alert('Error sending image to server');
+          result.textContent = "Error processing image.";
         });
       }, 'image/jpeg');
     }
-
-    function getColorName(hex) {
-      const colors = {
-        '#ffffff': 'White',
-        '#000000': 'Black',
-        '#ff0000': 'Red',
-        '#00ff00': 'Green',
-        '#0000ff': 'Blue',
-        '#ffff00': 'Yellow',
-        '#ffA500': 'Orange',
-        '#800080': 'Purple',
-        '#808080': 'Gray'
-      };
-      const simpleHex = hex.toLowerCase();
-      return colors[simpleHex] || 'Custom Shade';
-    }
-  </script></body>
+  </script>
+</body>
 </html>
