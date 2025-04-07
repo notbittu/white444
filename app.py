@@ -8,37 +8,47 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return render_template('index.html')  # Serve frontend page
+    return render_template('index.html')
 
-def calculate_shadow_effect(color, light_intensity):
-    r, g, b = color
-    factor = light_intensity / 100
-    new_r = int(min(255, r * factor))
-    new_g = int(min(255, g * factor))
-    new_b = int(min(255, b * factor))
-    return '#%02x%02x%02x' % (new_r, new_g, new_b)
+def apply_light_shadow_effect(rgb_color, intensity=80):
+    """Simulate light/shadow by adjusting intensity."""
+    factor = intensity / 100
+    return '#{:02x}{:02x}{:02x}'.format(
+        int(min(255, rgb_color[0] * factor)),
+        int(min(255, rgb_color[1] * factor)),
+        int(min(255, rgb_color[2] * factor))
+    )
+
+def get_dominant_color(image, k=4):
+    """Find dominant color using KMeans (better than avg)."""
+    pixels = image.reshape((-1, 3))
+    pixels = np.float32(pixels)
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+    _, labels, palette = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    dominant = palette[np.bincount(labels.flatten()).argmax()]
+    return tuple(map(int, dominant[::-1]))  # BGR to RGB
 
 @app.route('/color-suggestion', methods=['POST'])
 def color_suggestion():
     try:
-        image_file = request.files['image']
-        if not image_file:
-            return jsonify({'error': 'No file uploaded'}), 400
+        file = request.files.get('image')
+        if not file:
+            return jsonify({'error': 'No image received'}), 400
 
-        # Read and decode image
-        image = cv2.imdecode(np.frombuffer(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
+        # Read and flip image (fix camera mirror)
+        img_array = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        img = cv2.flip(img, 1)  # Flip horizontally
 
-        # Calculate average color
-        avg_color_per_row = np.average(image, axis=0)
-        avg_color = np.average(avg_color_per_row, axis=0).astype(int)
-        avg_color = (avg_color[2], avg_color[1], avg_color[0])  # BGR to RGB
+        dominant_rgb = get_dominant_color(img)
+        suggested_color = apply_light_shadow_effect(dominant_rgb, intensity=85)
 
-        # Apply light effect
-        light_intensity = 80  # Fixed for now
-        suggested_color = calculate_shadow_effect(avg_color, light_intensity)
+        return jsonify({
+            'dominant_rgb': dominant_rgb,
+            'suggested_color': suggested_color
+        })
 
-        return jsonify({'suggested_color': suggested_color})
-    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
