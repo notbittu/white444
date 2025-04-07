@@ -6,7 +6,7 @@ import numpy as np
 from werkzeug.utils import secure_filename
 
 # Config
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)
 
 UPLOAD_FOLDER = 'uploads'
@@ -73,5 +73,5 @@ def upload_image():
 
 
 # Start
-if _name_ == '_main_':
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
