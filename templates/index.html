@@ -3,72 +3,103 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Paint Home - Smart Wall Color Suggestion</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>Paint Home - Smart Wall Color Suggester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin-top: 20px;
+      color: #2c3e50;
+    }
+    video, canvas {
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+      margin: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .preview-box {
+      width: 200px;
+      height: 200px;
+      margin-top: 20px;
+      border-radius: 12px;
+      border: 2px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: #fff;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Paint Home</h1>
-    <p>Upload your wall image or click with camera to get the best color suggestions.</p>
 
-    <input type="file" id="imageInput" accept="image/*">
-    <button onclick="uploadImage()">Suggest Colors</button>
-    <button onclick="openCamera()">Capture from Camera</button>
+  <h1>Paint Home: Wall Color Suggestion</h1>
 
-    <video id="camera" autoplay playsinline style="display:none;"></video>
-    <canvas id="canvas" style="display:none;"></canvas>
+  <video id="video" width="360" height="270" autoplay></video>
+  <br>
+  <button onclick="capturePhoto()">Capture Wall</button>
+  <canvas id="canvas" width="360" height="270" style="display:none;"></canvas>
 
-    <div id="result"></div>
-  </div>
+  <div class="preview-box" id="previewBox">Suggested Color</div>
 
   <script>
-    async function uploadImage() {
-      const input = document.getElementById('imageInput');
-      const file = input.files[0];
-      if (!file) return alert("Please upload an image!");
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const previewBox = document.getElementById('previewBox');
+    const context = canvas.getContext('2d');
 
+    // Start webcam
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => alert("Camera access denied: " + err));
+
+    function capturePhoto() {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(sendToBackend, 'image/jpeg');
+    }
+
+    function sendToBackend(blob) {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append('image', blob, 'wall.jpg');
 
-      const res = await fetch('/color-suggestion', {
+      fetch('https://white444-2.onrender.com/color-suggestion', {
         method: 'POST',
         body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.suggested_color) {
+          previewBox.style.backgroundColor = data.suggested_color;
+          previewBox.textContent = data.suggested_color.toUpperCase();
+        } else {
+          previewBox.textContent = 'Error: ' + (data.error || 'Unknown');
+        }
+      })
+      .catch(err => {
+        previewBox.textContent = 'Error: ' + err.message;
       });
-
-      const data = await res.json();
-      document.getElementById('result').innerHTML = `
-        <h2>Suggested Color:</h2>
-        <div style="width:100px;height:100px;background:${data.suggested_color};margin:auto;border-radius:10px;"></div>
-        <p>${data.suggested_color}</p>
-      `;
-    }
-
-    function openCamera() {
-      const video = document.getElementById("camera");
-      const canvas = document.getElementById("canvas");
-      const input = document.getElementById("imageInput");
-
-      video.style.display = "block";
-
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-          video.srcObject = stream;
-
-          video.addEventListener("click", () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-
-            canvas.toBlob(blob => {
-              const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
-              const dt = new DataTransfer();
-              dt.items.add(file);
-              input.files = dt;
-              uploadImage();
-            });
-          });
-        });
     }
   </script>
+
 </body>
 </html>
