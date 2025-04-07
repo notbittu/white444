@@ -1,1 +1,10 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f4f4;
+    text-align: center;
+    padding: 40px;
+}
 
+h1 {
+    color: #333;
+}
