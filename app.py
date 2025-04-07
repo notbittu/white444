@@ -1,5 +1,3 @@
-
-
 from flask import Flask, request, jsonify, send_file 
 from flask_cors import CORS 
 import os import cv2 
@@ -51,3 +49,5 @@ cv2.imwrite(output_path, output)
 return send_file(output_path, mimetype='image/jpeg')
 
 if __name__ == "__main__": app.run(debug=True)
+
+
