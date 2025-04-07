@@ -1,93 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Paint Home - Wall Scanner</title>
-    <style>
-        body {
-            text-align: center;
-            font-family: Arial;
-            background-color: #f5f5f5;
-        }
-        video {
-            width: 80%;
-            max-width: 500px;
-            margin-top: 20px;
-            transform: scaleX(-1); /* mirror fix */
-        }
-        canvas {
-            display: none;
-        }
-        #colorBox {
-            width: 100px;
-            height: 100px;
-            margin: 20px auto;
-            border: 2px solid black;
-        }
-        button {
-            margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paint Home - Smart Wall Color Suggestion</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Paint Home - Smart Wall Scanner</h1>
-    <video id="video" autoplay></video>
-    <br>
-    <button id="flipBtn">Flip Camera</button>
-    <button onclick="captureImage()">Scan Wall</button>
-    <canvas id="canvas"></canvas>
-    <div id="colorBox"></div>
-    <p id="hexValue"></p>
+  <div class="container">
+    <h1>Paint Home</h1>
+    <p>Upload your wall image or click with camera to get the best color suggestions.</p>
 
-    <script>
-        let video = document.getElementById('video');
-        let canvas = document.getElementById('canvas');
-        let context = canvas.getContext('2d');
-        let usingFrontCamera = true;
-        let currentStream;
+    <input type="file" id="imageInput" accept="image/*">
+    <button onclick="uploadImage()">Suggest Colors</button>
+    <button onclick="openCamera()">Capture from Camera</button>
 
-        async function startCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-            const constraints = {
-                video: {
-                    facingMode: usingFrontCamera ? "user" : "environment"
-                }
-            };
-            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = currentStream;
-        }
+    <video id="camera" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
 
-        document.getElementById('flipBtn').addEventListener('click', () => {
-            usingFrontCamera = !usingFrontCamera;
-            startCamera();
-        });
+    <div id="result"></div>
+  </div>
 
-        startCamera();
+  <script>
+    async function uploadImage() {
+      const input = document.getElementById('imageInput');
+      const file = input.files[0];
+      if (!file) return alert("Please upload an image!");
 
-        async function captureImage() {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch('/color-suggestion', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      document.getElementById('result').innerHTML = `
+        <h2>Suggested Color:</h2>
+        <div style="width:100px;height:100px;background:${data.suggested_color};margin:auto;border-radius:10px;"></div>
+        <p>${data.suggested_color}</p>
+      `;
+    }
+
+    function openCamera() {
+      const video = document.getElementById("camera");
+      const canvas = document.getElementById("canvas");
+      const input = document.getElementById("imageInput");
+
+      video.style.display = "block";
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+
+          video.addEventListener("click", () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            context.save();
-            context.scale(-1, 1); // flip image back before capture
-            context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-            context.restore();
+            canvas.getContext('2d').drawImage(video, 0, 0);
 
-            canvas.toBlob(async function(blob) {
-                let formData = new FormData();
-                formData.append("image", blob, "frame.jpg");
-
-                let response = await fetch("/color-suggestion", {
-                    method: "POST",
-                    body: formData
-                });
-                let data = await response.json();
-                document.getElementById('colorBox').style.backgroundColor = data.color;
-                document.getElementById('hexValue').innerText = "Suggested Color: " + data.color;
-            }, 'image/jpeg');
-        }
-    </script>
+            canvas.toBlob(blob => {
+              const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              input.files = dt;
+              uploadImage();
+            });
+          });
+        });
+    }
+  </script>
 </body>
 </html>
