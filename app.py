@@ -1,58 +1,49 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-import cv2
-import numpy as np
+paint_home_app.py
 
-app = Flask(__name__)
-CORS(app)
+from flask import Flask, request, jsonify, send_file from flask_cors import CORS import os import cv2 import numpy as np
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+app = Flask(__name__) CORS(app)
 
-def apply_light_shadow_effect(rgb_color, intensity=80):
-    """Simulate light/shadow by adjusting intensity."""
-    factor = intensity / 100
-    return '#{:02x}{:02x}{:02x}'.format(
-        int(min(255, rgb_color[0] * factor)),
-        int(min(255, rgb_color[1] * factor)),
-        int(min(255, rgb_color[2] * factor))
-    )
+UPLOAD_FOLDER = "uploads" os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def get_dominant_color(image, k=4):
-    """Find dominant color using KMeans (better than avg)."""
-    pixels = image.reshape((-1, 3))
-    pixels = np.float32(pixels)
+Dummy AI suggestion
 
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    _, labels, palette = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-    dominant = palette[np.bincount(labels.flatten()).argmax()]
-    return tuple(map(int, dominant[::-1]))  # BGR to RGB
+def suggest_colors(image_path): return ["#D32F2F", "#388E3C", "#1976D2"]
 
-@app.route('/color-suggestion', methods=['POST'])
-def color_suggestion():
-    try:
-        file = request.files.get('image')
-        if not file:
-            return jsonify({'error': 'No image received'}), 400
+Realistic paint overlay using OpenCV
 
-        # Read and flip image (fix camera mirror)
-        img_array = np.frombuffer(file.read(), np.uint8)
-        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-        img = cv2.flip(img, 1)  # Flip horizontally
+def apply_color_on_wall(image_path, hex_color): img = cv2.imread(image_path) img = cv2.resize(img, (500, 500))
 
-        dominant_rgb = get_dominant_color(img)
-        suggested_color = apply_light_shadow_effect(dominant_rgb, intensity=85)
+hex_color = hex_color.lstrip('#')
+bgr_color = tuple(int(hex_color[i:i+2], 16) for i in (4, 2, 0))
 
-        return jsonify({
-            'dominant_rgb': dominant_rgb,
-            'suggested_color': suggested_color
-        })
+mask = cv2.inRange(img, (150, 150, 150), (255, 255, 255))
+color_layer = np.full(img.shape, bgr_color, dtype=np.uint8)
+colored_img = cv2.addWeighted(img, 0.6, color_layer, 0.4, 0)
+img[mask > 0] = colored_img[mask > 0]
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+return img
 
-if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+@app.route('/') def home(): return jsonify({"message": "Paint Home Backend Live"})
+
+@app.route('/upload', methods=['POST']) def upload_image(): file = request.files['image'] filename = os.path.join(UPLOAD_FOLDER, file.filename) file.save(filename)
+
+ai_colors = suggest_colors(filename)
+predefined_colors = ["#E91E63", "#2196F3", "#4CAF50", "#FF9800"]
+
+return jsonify({
+    "status": "success",
+    "ai_colors": ai_colors,
+    "predefined_colors": predefined_colors,
+    "filename": file.filename
+})
+
+@app.route('/preview', methods=['POST']) def preview(): data = request.json image_path = os.path.join(UPLOAD_FOLDER, data['filename']) hex_color = data['color']
+
+output = apply_color_on_wall(image_path, hex_color)
+output_path = os.path.join(UPLOAD_FOLDER, "preview.jpg")
+cv2.imwrite(output_path, output)
+
+return send_file(output_path, mimetype='image/jpeg')
+
+if __name__ == "__main__": app.run(debug=True)
