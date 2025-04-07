@@ -1,55 +1,31 @@
+<!-- templates/scan.html -->
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Paint Home - Wall Scanner</title>
+  <title>Scan Wall</title>
 </head>
 <body>
-    <h2>Upload Wall Image for Scanning</h2>
-    <input type="file" id="fileInput" accept="image/*">
-    <button onclick="uploadFile()">Scan</button>
-    <p id="result"></p>
+  <h1>Upload or Capture Wall Photo</h1>
+  <input type="file" id="imageInput">
+  <button onclick="uploadImage()">Get Color Suggestion</button>
+  <p id="result"></p>
 
-    <script>
-        function uploadFile() {
-            const fileInput = document.getElementById("fileInput");
-            const resultElement = document.getElementById("result");
+  <script>
+    async function uploadImage() {
+      const input = document.getElementById('imageInput');
+      const file = input.files[0];
 
-            // Check if file is selected
-            if (fileInput.files.length === 0) {
-                resultElement.innerText = "Error: Please select a file!";
-                return;
-            }
+      const formData = new FormData();
+      formData.append('image', file);
 
-            // Create FormData object
-            const formData = new FormData();
-            formData.append("file", fileInput.files[0]);
+      const response = await fetch('/color-suggestion', {
+        method: 'POST',
+        body: formData
+      });
 
-            // Show uploading message
-            resultElement.innerText = "Uploading and Scanning...";
-
-            // Make the fetch request
-            fetch("https://white444.onrender.com/scan", {
-                method: "POST",
-                body: formData,
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    resultElement.innerText = "Error: " + data.error;
-                } else {
-                    resultElement.innerText = "Result: " + data.result;
-                }
-            })
-            .catch(error => {
-                resultElement.innerText = "Error: " + error.message;
-                console.error("Error during upload:", error);
-            });
-        }
-    </script>
+      const data = await response.json();
+      document.getElementById('result').innerText = Suggested Color: ${data.suggested_color};
+    }
+  </script>
 </body>
 </html>
