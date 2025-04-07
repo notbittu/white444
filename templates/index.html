@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -51,55 +51,3 @@
     }
   </style>
 </head>
-<body>
-
-  <h1>Paint Home: Wall Color Suggestion</h1>
-
-  <video id="video" width="360" height="270" autoplay></video>
-  <br>
-  <button onclick="capturePhoto()">Capture Wall</button>
-  <canvas id="canvas" width="360" height="270" style="display:none;"></canvas>
-
-  <div class="preview-box" id="previewBox">Suggested Color</div>
-
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const previewBox = document.getElementById('previewBox');
-    const context = canvas.getContext('2d');
-
-    // Start webcam
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => video.srcObject = stream)
-      .catch(err => alert("Camera access denied: " + err));
-
-    function capturePhoto() {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(sendToBackend, 'image/jpeg');
-    }
-
-    function sendToBackend(blob) {
-      const formData = new FormData();
-      formData.append('image', blob, 'wall.jpg');
-
-      fetch('https://white444-2.onrender.com/color-suggestion', {
-        method: 'POST',
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.suggested_color) {
-          previewBox.style.backgroundColor = data.suggested_color;
-          previewBox.textContent = data.suggested_color.toUpperCase();
-        } else {
-          previewBox.textContent = 'Error: ' + (data.error || 'Unknown');
-        }
-      })
-      .catch(err => {
-        previewBox.textContent = 'Error: ' + err.message;
-      });
-    }
-  </script>
-
-</body>
-</html>
