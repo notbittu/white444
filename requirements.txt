@@ -1,7 +1,6 @@
 Flask
+Flask-Cors
+flask-talisman
+gunicorn
 numpy
 opencv-python
-gunicorn
-flask_cors
-flask-talisman
-python-magic
