@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import time
 import random
+import imghdr
 import logging
 
 # --- Config ---
@@ -40,11 +41,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def is_image_safe(filepath):
-    try:
-        img = cv2.imread(filepath)
-        return img is not None
-    except:
-        return False
+    return imghdr.what(filepath) in ALLOWED_EXTENSIONS
 
 def apply_color_overlay(image_path, color_rgb):
     image = cv2.imread(image_path)
@@ -69,12 +66,8 @@ def cleanup_old_files(folder, age_secs):
 
 # --- Routes ---
 @app.route("/")
-def home():
-    return jsonify({"message": "Paint Home backend is live!"})
-
-@app.route("/scan")
-def scan_route():
-    return jsonify({"status": "Scan route working!"})
+def index():
+    return "✅ Paint Home Flask Backend is Running"
 
 @app.route("/upload", methods=["POST"])
 def upload_wall_image():
