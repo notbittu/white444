@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 import time
 import random
-import magic
 import logging
 
 # --- Config ---
@@ -18,7 +17,7 @@ Talisman(app)
 UPLOAD_FOLDER = "uploads"
 RESULT_FOLDER = "results"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-CLEANUP_THRESHOLD_SECS = 600  # Files older than 10 minutes will be removed
+CLEANUP_THRESHOLD_SECS = 600  # 10 minutes
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["RESULT_FOLDER"] = RESULT_FOLDER
@@ -41,17 +40,17 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def is_image_safe(filepath):
-    mime_type = magic.from_file(filepath, mime=True)
-    return mime_type.startswith("image/")
+    try:
+        img = cv2.imread(filepath)
+        return img is not None
+    except:
+        return False
 
 def apply_color_overlay(image_path, color_rgb):
-    # Read image using OpenCV
     image = cv2.imread(image_path)
     if image is None:
         raise ValueError("Failed to read image")
-    # Create overlay with desired color (convert RGB to BGR)
     overlay = np.full(image.shape, color_rgb[::-1], dtype=np.uint8)
-    # Blend image with overlay
     blended = cv2.addWeighted(image, 0.6, overlay, 0.4, 0)
     result_path = os.path.join(RESULT_FOLDER, os.path.basename(image_path))
     cv2.imwrite(result_path, blended)
@@ -69,6 +68,14 @@ def cleanup_old_files(folder, age_secs):
                 logging.error(f"Error removing file {fpath}: {e}")
 
 # --- Routes ---
+@app.route("/")
+def home():
+    return jsonify({"message": "Paint Home backend is live!"})
+
+@app.route("/scan")
+def scan_route():
+    return jsonify({"status": "Scan route working!"})
+
 @app.route("/upload", methods=["POST"])
 def upload_wall_image():
     if 'image' not in request.files:
