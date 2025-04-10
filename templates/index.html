@@ -2,95 +2,110 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Paint Home – Smart Wall Painter</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background: linear-gradient(135deg, #74ABE2, #5563DE);
       margin: 0;
       padding: 20px;
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       min-height: 100vh;
       color: #333;
     }
     .container {
       background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 600px;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
       width: 100%;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 650px;
       text-align: center;
     }
     h1 {
       margin-bottom: 20px;
+      font-size: 26px;
+      color: #222;
     }
     video {
       width: 100%;
-      max-width: 500px;
-      border-radius: 8px;
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    input[type="file"] {
+      display: block;
+      margin: 15px auto 10px;
     }
     canvas {
       display: none;
     }
-    input[type="file"] {
-      margin-top: 10px;
-    }
     button {
-      padding: 10px 20px;
-      margin: 10px 5px;
-      font-size: 16px;
+      background: #007bff;
+      color: white;
       border: none;
       border-radius: 5px;
+      padding: 10px 18px;
+      font-size: 15px;
+      margin: 8px 4px;
       cursor: pointer;
-      background-color: #007bff;
-      color: #fff;
       transition: background 0.3s;
     }
     button:hover {
-      background-color: #0056b3;
+      background: #0056b3;
+    }
+    .btn-group {
+      margin-top: 10px;
     }
     #preview {
-      margin-top: 20px;
-      max-width: 100%;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin-top: 25px;
+      width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.25);
     }
     .info {
-      margin-top: 10px;
+      margin-top: 15px;
       font-size: 18px;
       font-weight: bold;
+      color: #444;
+    }
+    label {
+      font-weight: 500;
+      font-size: 15px;
+      display: block;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Paint Home – Smart Wall Painter</h1>
-    <!-- Live Camera Display -->
+
     <video id="video" autoplay playsinline></video>
-    <div>
-      <button id="toggleCamera">Toggle Camera</button>
+    
+    <div class="btn-group">
+      <button id="toggleCamera">Switch Camera</button>
       <button id="capture">Capture Photo</button>
     </div>
-    <!-- File Upload Option -->
+
+    <label for="fileInput">Or Upload Wall Image</label>
     <input type="file" id="fileInput" accept="image/*">
-    <div>
-      <button id="uploadImage">Upload Image</button>
-    </div>
-    <!-- Hidden Canvas for Capture -->
+
+    <button id="uploadImage">Analyze & Suggest Color</button>
+
     <canvas id="canvas"></canvas>
-    <!-- Processed Image Preview & Info -->
+
     <div id="output" style="display: none;">
-      <img id="preview" alt="Processed Preview" />
+      <img id="preview" alt="Preview" />
       <div class="info" id="colorInfo"></div>
     </div>
   </div>
 
   <script>
-    // Elements
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const previewImg = document.getElementById('preview');
@@ -100,52 +115,43 @@
     const fileInput = document.getElementById('fileInput');
     const uploadImageBtn = document.getElementById('uploadImage');
     const outputDiv = document.getElementById('output');
-    
+
     let currentStream = null;
-    // Default facing mode: "user" for front camera, "environment" for back
-    let facingMode = "user";
-    
+    let facingMode = "environment";
+
     async function startCamera() {
       if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
       }
       try {
-        // Request camera with the specified facing mode
         currentStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { exact: facingMode } },
           audio: false
         });
         video.srcObject = currentStream;
-        // Do not mirror the video; show as is for true-to-life image
         video.style.transform = "none";
       } catch (err) {
-        console.error("Error accessing camera:", err);
-        alert("Error accessing camera: " + err.message);
+        alert("Camera Error: " + err.message);
+        console.error(err);
       }
     }
-    
-    // Toggle between front ("user") and back ("environment") camera
+
     toggleCameraBtn.addEventListener('click', () => {
       facingMode = (facingMode === "user") ? "environment" : "user";
       startCamera();
     });
-    
-    // Start camera on page load
+
     startCamera();
-    
-    // Capture current frame from video
+
     captureBtn.addEventListener('click', () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
-      // Draw image without flipping, ensuring true orientation.
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      // Display captured image as preview
       previewImg.src = canvas.toDataURL("image/jpeg");
       outputDiv.style.display = "block";
     });
-    
-    // Handle file upload input (override capture)
+
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -156,24 +162,22 @@
       };
       reader.readAsDataURL(file);
     });
-    
-    // Upload the image to backend (either from capture or file)
+
     uploadImageBtn.addEventListener('click', async () => {
       let blob;
-      // Prefer file upload if available
       if (fileInput.files[0]) {
         blob = fileInput.files[0];
       } else if (previewImg.src) {
         const res = await fetch(previewImg.src);
         blob = await res.blob();
       } else {
-        alert("Please capture or upload an image first.");
+        alert("Capture or upload an image first.");
         return;
       }
-      
+
       const formData = new FormData();
       formData.append("image", blob, "wall.jpg");
-      
+
       try {
         const response = await fetch("/upload", {
           method: "POST",
@@ -181,16 +185,15 @@
         });
         const data = await response.json();
         if (data.preview_url) {
-          // Assume your backend is deployed at the same origin;
-          // adjust URL if necessary.
           previewImg.src = data.preview_url;
-          colorInfo.innerText = "Suggested Color: " + data.color_name + " (" + data.hex_code + ")";
+          colorInfo.innerText = `Suggested Color: ${data.color_name} (${data.hex_code})`;
           outputDiv.style.display = "block";
         } else {
           alert("Upload failed: " + data.error);
         }
       } catch (err) {
-        alert("Error uploading image: " + err.message);
+        alert("Upload error: " + err.message);
+        console.error(err);
       }
     });
   </script>
