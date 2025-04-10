@@ -9,19 +9,24 @@ import time
 import random
 import imghdr
 import logging
+import uuid
 
 # --- Config ---
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 Talisman(app)
 
 UPLOAD_FOLDER = "uploads"
 RESULT_FOLDER = "results"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 CLEANUP_THRESHOLD_SECS = 600  # 10 minutes
+MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB
 
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["RESULT_FOLDER"] = RESULT_FOLDER
+app.config.update({
+    "UPLOAD_FOLDER": UPLOAD_FOLDER,
+    "RESULT_FOLDER": RESULT_FOLDER,
+    "MAX_CONTENT_LENGTH": MAX_CONTENT_LENGTH
+})
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
@@ -41,7 +46,8 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def is_image_safe(filepath):
-    return imghdr.what(filepath) in ALLOWED_EXTENSIONS
+    file_type = imghdr.what(filepath)
+    return file_type in ALLOWED_EXTENSIONS
 
 def apply_color_overlay(image_path, color_rgb):
     image = cv2.imread(image_path)
@@ -49,7 +55,8 @@ def apply_color_overlay(image_path, color_rgb):
         raise ValueError("Failed to read image")
     overlay = np.full(image.shape, color_rgb[::-1], dtype=np.uint8)
     blended = cv2.addWeighted(image, 0.6, overlay, 0.4, 0)
-    result_path = os.path.join(RESULT_FOLDER, os.path.basename(image_path))
+    result_filename = f"{uuid.uuid4().hex}.jpg"
+    result_path = os.path.join(RESULT_FOLDER, result_filename)
     cv2.imwrite(result_path, blended)
     return result_path
 
@@ -76,19 +83,20 @@ def upload_wall_image():
 
     image_file = request.files['image']
     if not allowed_file(image_file.filename):
-        return jsonify({"error": "Invalid file format"}), 400
+        return jsonify({"error": "Unsupported file type"}), 400
 
     filename = secure_filename(image_file.filename)
     upload_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     image_file.save(upload_path)
-    logging.info(f"Image saved to {upload_path}")
+    logging.info(f"Image saved: {upload_path}")
 
     if not is_image_safe(upload_path):
         os.remove(upload_path)
-        return jsonify({"error": "Uploaded file is not a valid image"}), 400
+        return jsonify({"error": "Invalid image format"}), 400
 
     selected_color_name = random.choice(list(PALETTE.keys()))
     color_data = PALETTE[selected_color_name]
+
     try:
         result_path = apply_color_overlay(upload_path, color_data['rgb'])
     except Exception as e:
@@ -108,8 +116,9 @@ def serve_preview(filename):
     file_path = os.path.join(RESULT_FOLDER, filename)
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
-    return send_file(file_path, mimetype='image/jpeg')
+    mimetype = f'image/{imghdr.what(file_path)}'
+    return send_file(file_path, mimetype=mimetype)
 
-# --- Start Server ---
+# --- Run Server ---
 if __name__ == "__main__":
     app.run(debug=True)
